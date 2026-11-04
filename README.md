@@ -10,7 +10,8 @@ The game has a built-in module for PS4 controllers, but it does not recognize th
 |---|---|
 | Game version tested | Steam build 3383128 |
 | DualSense over Bluetooth | Tested in game: icons, buttons, sticks |
-| DualSense over USB | Report conversion covered by unit tests, not tried in game |
+| DualSense over USB | Tested in game on Linux: buttons |
+| Linux, Proton-CachyOS 11.0 | Tested in game over USB |
 | DualSense Edge | Recognized by the code, not tested |
 
 ## Install
@@ -19,6 +20,16 @@ The game has a built-in module for PS4 controllers, but it does not recognize th
 2. Extract `xinput9_1_0.dll` and `dinput8.dll` to the game folder, next to `SAOLS.exe`. It is usually `steamapps\common\Sword Art Online Lost Song`.
 3. Turn off Steam Input for the game: in Steam, open the game's Properties, then Controller, and choose to disable Steam Input.
 4. Pair or plug in the controller and start the game.
+
+### Linux (Proton)
+
+Follow the same steps, then add this to the game's launch options in Steam (Properties, then General):
+
+```
+WINEDLLOVERRIDES="xinput9_1_0=n,b;dinput8=n,b" %command%
+```
+
+Without it, Proton uses its own `xinput9_1_0.dll` instead of the mod's, so the mod never starts and `sao_ps5.log` is not created.
 
 ## Build from source
 
@@ -38,7 +49,7 @@ Delete `xinput9_1_0.dll`, `dinput8.dll` and `sao_ps5.log` from the game folder.
 
 - **`xinput9_1_0.dll`** reads the DualSense over HID. It intercepts the game's HID calls and answers as a DualShock 4 over USB: identity, device capabilities, feature reports and 64-byte input reports. Rumble commands from the game are converted to DualSense output reports.
 - **`dinput8.dll`** hides the DualSense from DirectInput so that the game does not read it a second time with the wrong button layout.
-- **Fallback:** until the game starts reading the controller in PS4 mode, the DualSense is exposed as XInput pad 0, which shows Xbox icons.
+- **Fallback:** if the game has not started reading the controller in PS4 mode 10 seconds after the DualSense connects, the DualSense is exposed as XInput pad 0, which shows Xbox icons. Exposing it sooner can make the game ignore PS4 mode.
 
 Other controllers are passed through unchanged.
 
@@ -51,6 +62,8 @@ Other controllers are passed through unchanged.
 ## Troubleshooting
 
 The mod writes `sao_ps5.log` next to the game. `Le jeu utilise la manette en mode PS4` means that PS4 mode is active. Please attach this file when reporting a problem.
+
+On Linux, if `sao_ps5.log` does not appear, check the launch options above.
 
 ## Tests
 

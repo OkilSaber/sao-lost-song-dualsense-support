@@ -7,6 +7,10 @@
 #include <stdarg.h>
 #include "dualsense.h"
 
+// Delai avant d'exposer la manette XInput de repli. Si le jeu la voit avant de passer en
+// mode PS4, il peut la garder et ignorer ensuite la manette PS4 (constate sous Proton).
+#define FALLBACK_DELAY_MS 10000
+
 typedef DWORD (WINAPI *GetState_t)(DWORD, XINPUT_STATE *);
 typedef DWORD (WINAPI *SetState_t)(DWORD, XINPUT_VIBRATION *);
 typedef DWORD (WINAPI *GetCaps_t)(DWORD, DWORD, XINPUT_CAPABILITIES *);
@@ -21,6 +25,7 @@ static GetGuids_t g_realGetGuids;
 static INIT_ONCE g_once = INIT_ONCE_STATIC_INIT;
 static SRWLOCK g_lock = SRWLOCK_INIT;
 static volatile LONG g_connected;
+static volatile DWORD g_connectedAt;
 static XINPUT_GAMEPAD g_pad;
 static DWORD g_packet;
 static HANDLE g_write = INVALID_HANDLE_VALUE;
@@ -125,6 +130,7 @@ static DWORD WINAPI reader_thread(void *unused) {
             g_pad = p;
             ds_make_ds4(r, got, g_ds4Report, counter++);
             ReleaseSRWLockExclusive(&g_lock);
+            if (first) g_connectedAt = GetTickCount();
             InterlockedExchange(&g_connected, 1);
             SetEvent(g_reportEvent);
             if (first) {
@@ -187,7 +193,7 @@ static void init(void) {
 // Les vraies manettes XInput restent utilisables, decalees d'un rang si la DualSense est la.
 // En mode PS4, le jeu lit la DualSense par HID : elle ne doit plus apparaitre ici aussi.
 static BOOL forward_index(DWORD *index) {
-    if (!g_connected || g_ds4Active) return TRUE;
+    if (!g_connected || g_ds4Active || GetTickCount() - g_connectedAt < FALLBACK_DELAY_MS) return TRUE;
     if (*index == 0) return FALSE;
     (*index)--;
     return TRUE;
