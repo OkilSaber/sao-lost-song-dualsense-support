@@ -48,6 +48,7 @@ Delete `xinput9_1_0.dll`, `dinput8.dll` and `sao_ps5.log` from the game folder.
 ## How it works
 
 - **`xinput9_1_0.dll`** reads the DualSense over HID. It intercepts the game's HID calls and answers as a DualShock 4 over USB: identity, device capabilities, feature reports and 64-byte input reports. Rumble commands from the game are converted to DualSense output reports.
+- **On Linux over USB**, the DualSense is read directly from `/dev/hidraw`, because Wine's HID layer delivers reports with gaps of several hundred milliseconds.
 - **`dinput8.dll`** hides the DualSense from DirectInput so that the game does not read it a second time with the wrong button layout.
 - **Fallback:** if the game has not started reading the controller in PS4 mode 10 seconds after the DualSense connects, the DualSense is exposed as XInput pad 0, which shows Xbox icons. Exposing it sooner can make the game ignore PS4 mode.
 
@@ -58,6 +59,7 @@ Other controllers are passed through unchanged.
 - The light bar color requested by the game is not applied.
 - The game sees a controller on USB with a full battery, whatever the real state.
 - Only one DualSense is supported.
+- On Linux over Bluetooth, the controller is still read through Wine's HID layer, which can add input delay.
 
 ## Troubleshooting
 

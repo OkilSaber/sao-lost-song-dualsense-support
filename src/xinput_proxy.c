@@ -96,6 +96,27 @@ static HANDLE open_dualsense(HANDLE *write, DWORD *inputLen) {
     return found;
 }
 
+// Sous Wine, la couche HID laisse des trous de plusieurs centaines de ms entre les rapports.
+// Ouvre directement le peripherique Linux, sinon retourne INVALID_HANDLE_VALUE.
+static HANDLE open_hidraw(void) {
+    if (!GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "wine_get_version")) return INVALID_HANDLE_VALUE;
+    for (int i = 0; i < 64; i++) {
+        char path[80], text[512];
+        DWORD got = 0;
+        snprintf(path, sizeof(path), "\\\\?\\Z:\\sys\\class\\hidraw\\hidraw%d\\device\\uevent", i);
+        HANDLE f = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+        if (f == INVALID_HANDLE_VALUE) continue;
+        BOOL ok = ReadFile(f, text, sizeof(text) - 1, &got, NULL);
+        CloseHandle(f);
+        if (!ok) continue;
+        text[got] = 0;
+        if (!strstr(text, "0000054C:00000CE6") && !strstr(text, "0000054C:00000DF2")) continue;
+        snprintf(path, sizeof(path), "\\\\?\\Z:\\dev\\hidraw%d", i);
+        return CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+    }
+    return INVALID_HANDLE_VALUE;
+}
+
 static DWORD WINAPI reader_thread(void *unused) {
     (void)unused;
     for (;;) {
@@ -122,7 +143,18 @@ static DWORD WINAPI reader_thread(void *unused) {
         DWORD got;
         BOOL first = TRUE;
         BYTE counter = 0;
-        while (ReadFile(h, r, sizeof(r), &got, NULL)) {
+        DWORD readLen = sizeof(r);
+        if (!bluetooth) {
+            HANDLE raw = open_hidraw();
+            if (raw != INVALID_HANDLE_VALUE) {
+                CloseHandle(h);
+                h = raw;
+                readLen = inputLen; // Wine attend d'avoir rempli le tampon sur un peripherique
+                SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+                log_line("Lecture directe de hidraw");
+            }
+        }
+        while (ReadFile(h, r, readLen, &got, NULL)) {
             XINPUT_GAMEPAD p;
             if (!ds_parse_input(r, got, &p)) continue;
             AcquireSRWLockExclusive(&g_lock);
