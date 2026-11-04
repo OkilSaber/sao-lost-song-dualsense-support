@@ -13,7 +13,14 @@ The game has a built-in module for PS4 controllers, but it does not recognize th
 | DualSense over USB | Report conversion covered by unit tests, not tried in game |
 | DualSense Edge | Recognized by the code, not tested |
 
-## Build
+## Install
+
+1. Download the zip from the [latest release](https://github.com/OkilSaber/sao-lost-song-dualsense-support/releases/latest).
+2. Extract `xinput9_1_0.dll` and `dinput8.dll` to the game folder, next to `SAOLS.exe`. It is usually `steamapps\common\Sword Art Online Lost Song`.
+3. Turn off Steam Input for the game: in Steam, open the game's Properties, then Controller, and choose to disable Steam Input.
+4. Pair or plug in the controller and start the game.
+
+## Build from source
 
 Requires Visual Studio 2022 Community with the C++ desktop tools. If your edition or install path differs, edit the `vcvars64.bat` path in `build.bat`.
 
@@ -22,12 +29,6 @@ build.bat
 ```
 
 The DLLs are written to `dist\`.
-
-## Install
-
-1. Copy `xinput9_1_0.dll` and `dinput8.dll` from `dist\` to the game folder, next to `SAOLS.exe`. It is usually `steamapps\common\Sword Art Online Lost Song`.
-2. Turn off Steam Input for the game: in Steam, open the game's Properties, then Controller, and choose to disable Steam Input.
-3. Pair or plug in the controller and start the game.
 
 ## Uninstall
 
